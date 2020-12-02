@@ -1,4 +1,5 @@
 const express = require("express");
+const crypto = require("crypto");
 const Razorpay = require("razorpay");
 
 const app = express();
@@ -12,9 +13,20 @@ const razorpay = new Razorpay({
 app.post("/createOrder", async (req, res) => {
   const order = await razorpay.orders.create({
     amount: req.body.amount,
-    currency: 'INR',
+    currency: "INR",
   });
   res.send(order);
+});
+
+app.post("/verifySignature", async (req, res) => {
+  const { orderID, transaction } = req.body;
+
+  const generatedSignature = crypto
+    .createHmac("sha256", process.env.SECRETKEY)
+    .update(`${orderID}|${transaction.razorpay_payment_id}`)
+    .digest("hex");
+
+  res.send({ validSignature: generatedSignature === transaction.razorpay_signature });
 });
 
 const port = process.env.PORT || 3000;
